@@ -13,7 +13,8 @@ struct RecurrenceDetector: Sendable {
 
         for event in events {
             guard let app = event.data["app"]?.stringValue,
-                  let title = event.data["title"]?.stringValue else { continue }
+                  let title = event.data["title"]?.stringValue,
+                  !app.isEmpty, !title.isEmpty else { continue }
             let key = "\(app)::\(title)"
             var accumulator = accumulators[key] ?? Accumulator(app: app, title: title)
             accumulator.occurrences += 1

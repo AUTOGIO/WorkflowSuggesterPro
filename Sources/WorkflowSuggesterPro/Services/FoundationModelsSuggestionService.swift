@@ -1,3 +1,4 @@
+import Foundation
 import FoundationModels
 
 enum FoundationModelsSuggestionError: Error, CustomStringConvertible {
@@ -34,7 +35,20 @@ struct FoundationModelsSuggestionService: Sendable {
 
         \(WorkflowPromptFormatting.instruction)
         """
-        let result = try await session.respond(to: prompt, generating: [SuggestionResult].self)
-        return result.content
+        // includeSchemaInPrompt: false — guided generation constrains output via the
+        // Generable schema regardless; spelling it out in the prompt text is pure token
+        // cost against the model's 8192-token context window with no accuracy benefit.
+        //
+        // Uses SuggestionList (a wrapper Generable with an array property), not
+        // [SuggestionResult].self directly — measured on real hardware that a top-level
+        // array-of-Generable type burns ~7900 tokens of fixed schema/grammar overhead
+        // against the 8192-token window, vs. a 286-token actual prompt. The wrapper
+        // avoids that overhead.
+        let result = try await session.respond(
+            to: prompt,
+            generating: SuggestionList.self,
+            includeSchemaInPrompt: false
+        )
+        return result.content.suggestions
     }
 }

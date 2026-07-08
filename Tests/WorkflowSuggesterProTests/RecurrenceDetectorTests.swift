@@ -50,6 +50,25 @@ private func makeEvent(app: String, title: String, duration: Double = 60, at off
     #expect(result.isEmpty)
 }
 
+@Test func skipsEventsWithEmptyAppOrTitle() throws {
+    // Real AW data includes noise like Finder/Raycast events with an empty title —
+    // these aren't meaningful "recurring workflows" and would otherwise pollute suggestions.
+    let events = [
+        makeEvent(app: "Finder", title: ""),
+        makeEvent(app: "Finder", title: ""),
+        makeEvent(app: "Finder", title: ""),
+        makeEvent(app: "Finder", title: ""),
+        makeEvent(app: "", title: "Raycast"),
+        makeEvent(app: "", title: "Raycast"),
+        makeEvent(app: "", title: "Raycast"),
+        makeEvent(app: "", title: "Raycast"),
+    ]
+
+    let result = RecurrenceDetector().detect(events: events, minOccurrences: 4)
+
+    #expect(result.isEmpty)
+}
+
 @Test func sortsByOccurrencesDescending() throws {
     let events =
         Array(repeating: makeEvent(app: "A", title: "A"), count: 4) +

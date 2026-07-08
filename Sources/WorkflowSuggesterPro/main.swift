@@ -2,6 +2,11 @@ import Foundation
 
 let lookbackDays = 14
 let minOccurrences = 4
+// The on-device model's context window is 8192 tokens. A real run against 13 accumulated
+// workflows overflowed it by 3 tokens — nothing bounded prompt size as AW history grows,
+// so this would recur indefinitely without a cap. Top-N by occurrence is also the most
+// useful subset to send: the highest-occurrence workflows are the best automation candidates.
+let maxWorkflowsInPrompt = 8
 
 func run() async {
     do {
@@ -23,14 +28,19 @@ func run() async {
         }
         print("")
 
+        let promptWorkflows = Array(recurring.prefix(maxWorkflowsInPrompt))
+        if promptWorkflows.count < recurring.count {
+            print("Sending the top \(promptWorkflows.count) by occurrence to the model (of \(recurring.count) found).\n")
+        }
+
         let suggestions: [SuggestionResult]
         do {
-            suggestions = try await FoundationModelsSuggestionService().generateSuggestions(for: recurring)
+            suggestions = try await FoundationModelsSuggestionService().generateSuggestions(for: promptWorkflows)
             print("Generated suggestions on-device via Apple Foundation Models.\n")
         } catch let error as FoundationModelsSuggestionError {
             print("On-device model unavailable: \(error.description)")
             print("Falling back to cloud provider...\n")
-            suggestions = try await CloudSuggestionService().generateSuggestions(for: recurring)
+            suggestions = try await CloudSuggestionService().generateSuggestions(for: promptWorkflows)
         }
 
         for suggestion in suggestions {
