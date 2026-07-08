@@ -27,28 +27,33 @@ struct FoundationModelsSuggestionService: Sendable {
             throw FoundationModelsSuggestionError.unavailable(reason)
         }
 
-        let session = LanguageModelSession()
-        let prompt = """
-        Recurring workflows detected on this Mac from the last 14 days of window-activity history:
-
-        \(WorkflowPromptFormatting.summary(for: workflows))
-
-        \(WorkflowPromptFormatting.instruction)
-        """
-        // includeSchemaInPrompt: false — guided generation constrains output via the
-        // Generable schema regardless; spelling it out in the prompt text is pure token
-        // cost against the model's 8192-token context window with no accuracy benefit.
+        // Free-text generation + manual JSON parsing (via CloudJSONExtraction), not
+        // @Generable/guided generation. Real runs on this on-device model went through
+        // three failure modes with schema-constrained generation: a top-level array type
+        // burning ~7900 tokens of fixed schema overhead; an empty GeneratedContent when
+        // schema-in-prompt was disabled to dodge that; and a renewed overflow (8193/8192)
+        // even after wrapping in a single Generable and shrinking the prompt hard. The
+        // common thread was fixed schema/grammar overhead swamping this model's 8192-token
+        // context regardless of tuning. Free-text sidesteps schema entirely — it's the
+        // same approach already proven reliable for the cloud providers.
         //
-        // Uses SuggestionList (a wrapper Generable with an array property), not
-        // [SuggestionResult].self directly — measured on real hardware that a top-level
-        // array-of-Generable type burns ~7900 tokens of fixed schema/grammar overhead
-        // against the 8192-token window, vs. a 286-token actual prompt. The wrapper
-        // avoids that overhead.
-        let result = try await session.respond(
-            to: prompt,
-            generating: SuggestionList.self,
-            includeSchemaInPrompt: false
-        )
-        return result.content.suggestions
+        // One bounded retry: a real run produced free text that wasn't valid JSON (the
+        // small on-device model doesn't follow strict-formatting instructions as reliably
+        // as cloud models). Retrying once with an added, stricter reminder is the standard
+        // mitigation — capped at 2 attempts total, not an unbounded loop.
+        var lastError: Error = LLMProviderError.invalidResponse("on-device generation produced no attempts")
+        for attempt in 1...2 {
+            let session = LanguageModelSession()
+            let prompt = attempt == 1
+                ? WorkflowPromptFormatting.jsonPrompt(for: workflows)
+                : WorkflowPromptFormatting.jsonPrompt(for: workflows) + "\n\n" + WorkflowPromptFormatting.strictJSONReminder
+            do {
+                let result = try await session.respond(to: prompt)
+                return try CloudJSONExtraction.parseSuggestions(from: result.content)
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError
     }
 }

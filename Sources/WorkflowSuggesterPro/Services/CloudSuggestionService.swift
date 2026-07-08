@@ -9,17 +9,7 @@ struct CloudSuggestionService: Sendable {
 
     func generateSuggestions(for workflows: [RecurringWorkflow]) async throws -> [SuggestionResult] {
         let provider = try selectProvider()
-        let prompt = """
-        Recurring workflows detected on this Mac from the last 14 days of window-activity history:
-
-        \(WorkflowPromptFormatting.summary(for: workflows))
-
-        \(WorkflowPromptFormatting.instruction)
-
-        Respond with ONLY a JSON array, no markdown code fences, no commentary. Each element must be \
-        an object with exactly these string fields: "title", "rationale", "implementation", "savings" \
-        (one of "High", "Medium", "Low").
-        """
+        let prompt = WorkflowPromptFormatting.jsonPrompt(for: workflows)
         return try await provider.generateSuggestions(prompt: prompt)
     }
 

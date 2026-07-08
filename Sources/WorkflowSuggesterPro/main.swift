@@ -2,11 +2,13 @@ import Foundation
 
 let lookbackDays = 14
 let minOccurrences = 4
-// The on-device model's context window is 8192 tokens. A real run against 13 accumulated
-// workflows overflowed it by 3 tokens — nothing bounded prompt size as AW history grows,
-// so this would recur indefinitely without a cap. Top-N by occurrence is also the most
-// useful subset to send: the highest-occurrence workflows are the best automation candidates.
-let maxWorkflowsInPrompt = 8
+// The on-device model's context window is 8192 tokens. Live AW data is a moving target —
+// it grows every time this tool (or anything else) is used, so two real runs minutes apart
+// hit two different overflow points (8195, then 8193 after other tuning) even with the same
+// cap. Keeping real margin here rather than tuning to the exact edge; see also the title
+// truncation in WorkflowPromptFormatting, which bounds per-item cost regardless of how long
+// file/folder names get.
+let maxWorkflowsInPrompt = 5
 
 func run() async {
     do {
