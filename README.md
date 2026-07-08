@@ -28,6 +28,15 @@ Looks back 14 days, requires at least 4 occurrences of the same app/window title
 
 Review each script before running it — the LLM's implementation notes are written as comments, not executed automatically.
 
+## Testing the cloud fallback
+
+The cloud path only runs when the on-device model is unavailable, which never happens on a
+Mac with Apple Intelligence enabled — so it's otherwise untestable. Force it with:
+
+```sh
+WORKFLOWSUGGESTER_FORCE_CLOUD=1 ANTHROPIC_API_KEY=... swift run WorkflowSuggesterPro
+```
+
 ## Test
 
 ```sh

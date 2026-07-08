@@ -35,14 +35,24 @@ func run() async {
             print("Sending the top \(promptWorkflows.count) by occurrence to the model (of \(recurring.count) found).\n")
         }
 
+        // WORKFLOWSUGGESTER_FORCE_CLOUD skips the on-device attempt entirely — without it,
+        // the cloud path is unreachable on any Mac where Apple Intelligence is enabled and
+        // working, which makes it untestable in normal use.
+        let forceCloud = ProcessInfo.processInfo.environment["WORKFLOWSUGGESTER_FORCE_CLOUD"] != nil
+
         let suggestions: [SuggestionResult]
-        do {
-            suggestions = try await FoundationModelsSuggestionService().generateSuggestions(for: promptWorkflows)
-            print("Generated suggestions on-device via Apple Foundation Models.\n")
-        } catch let error as FoundationModelsSuggestionError {
-            print("On-device model unavailable: \(error.description)")
-            print("Falling back to cloud provider...\n")
+        if forceCloud {
+            print("WORKFLOWSUGGESTER_FORCE_CLOUD set — skipping on-device, using cloud provider...\n")
             suggestions = try await CloudSuggestionService().generateSuggestions(for: promptWorkflows)
+        } else {
+            do {
+                suggestions = try await FoundationModelsSuggestionService().generateSuggestions(for: promptWorkflows)
+                print("Generated suggestions on-device via Apple Foundation Models.\n")
+            } catch let error as FoundationModelsSuggestionError {
+                print("On-device model unavailable: \(error.description)")
+                print("Falling back to cloud provider...\n")
+                suggestions = try await CloudSuggestionService().generateSuggestions(for: promptWorkflows)
+            }
         }
 
         for suggestion in suggestions {
