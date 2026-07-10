@@ -1,13 +1,13 @@
 import Foundation
 
 enum AWError: Error, CustomStringConvertible {
-    case bucketNotFound
+    case bucketNotFound(prefix: String)
     case requestFailed(String)
 
     var description: String {
         switch self {
-        case .bucketNotFound:
-            return "No aw-watcher-window bucket found. Is ActivityWatch running with the window watcher active?"
+        case .bucketNotFound(let prefix):
+            return "No \(prefix)* bucket found. Is ActivityWatch running with that watcher active?"
         case .requestFailed(let message):
             return "ActivityWatch request failed: \(message)"
         }
@@ -24,12 +24,20 @@ actor ActivityWatchService {
     /// Discover bucket IDs at runtime — don't hardcode a hostname, since bucket IDs are
     /// hostname-suffixed and differ across machines.
     func discoverWindowBucket() async throws -> String {
+        try await discoverBucket(prefix: "aw-watcher-window_")
+    }
+
+    func discoverAFKBucket() async throws -> String {
+        try await discoverBucket(prefix: "aw-watcher-afk_")
+    }
+
+    private func discoverBucket(prefix: String) async throws -> String {
         let url = baseURL.appendingPathComponent("buckets/")
         let (data, response) = try await URLSession.shared.data(from: url)
         try Self.checkHTTPStatus(response)
         let buckets = try JSONDecoder().decode([String: BucketInfo].self, from: data)
-        guard let match = buckets.keys.first(where: { $0.hasPrefix("aw-watcher-window_") }) else {
-            throw AWError.bucketNotFound
+        guard let match = buckets.keys.first(where: { $0.hasPrefix(prefix) }) else {
+            throw AWError.bucketNotFound(prefix: prefix)
         }
         return match
     }

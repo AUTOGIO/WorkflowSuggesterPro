@@ -15,7 +15,24 @@ func run() async {
         let awService = ActivityWatchService()
         let bucketId = try await awService.discoverWindowBucket()
         let since = Date().addingTimeInterval(-Double(lookbackDays) * 86400)
-        let events = try await awService.fetchEvents(bucketId: bucketId, since: since)
+        let windowEvents = try await awService.fetchEvents(bucketId: bucketId, since: since)
+
+        // AFK-filter window events before recurrence detection, so idle/background window
+        // time doesn't count as "recurring" — mirrors AW's own filter_period_intersect
+        // pattern for combining the window and AFK watchers. Non-fatal if the AFK watcher
+        // isn't running: fall back to unfiltered events rather than failing the whole run.
+        let events: [AWEvent]
+        do {
+            let afkBucketId = try await awService.discoverAFKBucket()
+            let afkEvents = try await awService.fetchEvents(bucketId: afkBucketId, since: since)
+            events = AFKFilter().filterToActive(windowEvents: windowEvents, afkEvents: afkEvents)
+            if events.count < windowEvents.count {
+                print("Filtered out \(windowEvents.count - events.count) AFK/idle window event(s).\n")
+            }
+        } catch {
+            print("AFK bucket unavailable (\(error)); using unfiltered window events.\n")
+            events = windowEvents
+        }
 
         let recurring = RecurrenceDetector().detect(events: events, minOccurrences: minOccurrences)
         guard !recurring.isEmpty else {
