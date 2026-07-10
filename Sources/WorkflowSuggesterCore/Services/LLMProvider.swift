@@ -5,12 +5,12 @@ protocol LLMProvider: Sendable {
     func generateSuggestions(prompt: String) async throws -> [SuggestionResult]
 }
 
-enum LLMProviderError: Error, CustomStringConvertible {
+public enum LLMProviderError: Error, CustomStringConvertible {
     case missingAPIKey(String)
     case requestFailed(String)
     case invalidResponse(String)
 
-    var description: String {
+    public var description: String {
         switch self {
         case .missingAPIKey(let envVar): return "Missing \(envVar) environment variable."
         case .requestFailed(let message): return "Request failed: \(message)"

@@ -9,8 +9,10 @@ import Foundation
 /// drops each window event whole. That's coarser than AW's own canonical-events processing,
 /// but sufficient for RecurrenceDetector, which only needs occurrence counts and rough
 /// totals, not precise durations.
-struct AFKFilter: Sendable {
-    func filterToActive(windowEvents: [AWEvent], afkEvents: [AWEvent]) -> [AWEvent] {
+public struct AFKFilter: Sendable {
+    public init() {}
+
+    public func filterToActive(windowEvents: [AWEvent], afkEvents: [AWEvent]) -> [AWEvent] {
         let notAFKIntervals: [(start: Date, end: Date)] = afkEvents.compactMap { event in
             guard event.data["status"]?.stringValue == "not-afk" else { return nil }
             return (event.timestamp, event.timestamp.addingTimeInterval(event.duration))

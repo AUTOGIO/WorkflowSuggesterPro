@@ -1,17 +1,21 @@
 import Foundation
 
-enum AutomationScriptWriterError: Error, CustomStringConvertible {
+public enum AutomationScriptWriterError: Error, CustomStringConvertible {
     case noApplicationSupportDirectory
 
-    var description: String {
+    public var description: String {
         "Could not resolve the user's Application Support directory."
     }
 }
 
-struct AutomationScriptWriter: Sendable {
+public struct AutomationScriptWriter: Sendable {
     private let outputDirectory: URL
 
-    init() throws {
+    /// Exposed so the GUI can list/reveal previously-generated scripts — the CLI never
+    /// needed this, it only ever writes.
+    public var outputDirectoryURL: URL { outputDirectory }
+
+    public init() throws {
         guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             throw AutomationScriptWriterError.noApplicationSupportDirectory
         }
@@ -21,7 +25,7 @@ struct AutomationScriptWriter: Sendable {
         try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
     }
 
-    func write(_ suggestions: [SuggestionResult], timestamp: Date) throws -> [URL] {
+    public func write(_ suggestions: [SuggestionResult], timestamp: Date) throws -> [URL] {
         let stamp = Self.timestampFormatter.string(from: timestamp)
         var writtenURLs: [URL] = []
         for (index, suggestion) in suggestions.enumerated() {

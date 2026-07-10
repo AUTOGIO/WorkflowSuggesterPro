@@ -1,12 +1,12 @@
 import Foundation
 
-enum AnyCodableValue: Codable, Sendable {
+public enum AnyCodableValue: Codable, Sendable {
     case string(String)
     case int(Int)
     case double(Double)
     case bool(Bool)
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let value = try? container.decode(Bool.self) {
             self = .bool(value)
@@ -24,7 +24,7 @@ enum AnyCodableValue: Codable, Sendable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .string(let value): try container.encode(value)
@@ -34,17 +34,24 @@ enum AnyCodableValue: Codable, Sendable {
         }
     }
 
-    var stringValue: String? {
+    public var stringValue: String? {
         if case .string(let value) = self { return value }
         return nil
     }
 }
 
-struct AWEvent: Codable, Sendable {
-    let id: Int?
-    let timestamp: Date
-    let duration: Double
-    let data: [String: AnyCodableValue]
+public struct AWEvent: Codable, Sendable {
+    public let id: Int?
+    public let timestamp: Date
+    public let duration: Double
+    public let data: [String: AnyCodableValue]
+
+    public init(id: Int?, timestamp: Date, duration: Double, data: [String: AnyCodableValue]) {
+        self.id = id
+        self.timestamp = timestamp
+        self.duration = duration
+        self.data = data
+    }
 }
 
 struct BucketInfo: Codable, Sendable {

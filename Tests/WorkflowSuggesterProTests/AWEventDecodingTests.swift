@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import WorkflowSuggesterPro
+@testable import WorkflowSuggesterCore
 
 // Captured verbatim from a live `GET /api/0/buckets/{id}/events` call against a running
 // ActivityWatch instance — guards the real risk this project flagged: AW timestamps carry

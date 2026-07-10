@@ -1,9 +1,8 @@
 import Foundation
 
-/// Plain Codable DTO for parsing cloud LLM JSON output, kept separate from `SuggestionResult`
-/// (which is `@Generable`-only, for the guided on-device path) rather than making one type
-/// serve both — avoids depending on unverified interaction between the `@Generable` macro's
-/// synthesized members and `Codable` synthesis.
+/// Plain Codable DTO for parsing free-text LLM JSON output (both the cloud providers and,
+/// after guided generation was abandoned, the on-device path too — see
+/// FoundationModelsSuggestionService), then mapped into the public SuggestionResult.
 struct CloudSuggestionResult: Codable, Sendable {
     let title: String
     let rationale: String

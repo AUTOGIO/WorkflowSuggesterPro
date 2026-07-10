@@ -1,7 +1,9 @@
 import Foundation
 
-struct RecurrenceDetector: Sendable {
-    func detect(events: [AWEvent], minOccurrences: Int) -> [RecurringWorkflow] {
+public struct RecurrenceDetector: Sendable {
+    public init() {}
+
+    public func detect(events: [AWEvent], minOccurrences: Int) -> [RecurringWorkflow] {
         struct Accumulator {
             var app: String
             var title: String

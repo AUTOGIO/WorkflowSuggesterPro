@@ -1,4 +1,5 @@
 import Foundation
+import WorkflowSuggesterCore
 
 let lookbackDays = 14
 let minOccurrences = 4

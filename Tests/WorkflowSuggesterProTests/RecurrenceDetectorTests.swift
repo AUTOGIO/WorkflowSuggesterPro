@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import WorkflowSuggesterPro
+@testable import WorkflowSuggesterCore
 
 private func makeEvent(app: String, title: String, duration: Double = 60, at offset: TimeInterval = 0) -> AWEvent {
     AWEvent(

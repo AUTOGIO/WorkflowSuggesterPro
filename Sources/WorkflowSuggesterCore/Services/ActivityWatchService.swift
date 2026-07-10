@@ -1,10 +1,10 @@
 import Foundation
 
-enum AWError: Error, CustomStringConvertible {
+public enum AWError: Error, CustomStringConvertible {
     case bucketNotFound(prefix: String)
     case requestFailed(String)
 
-    var description: String {
+    public var description: String {
         switch self {
         case .bucketNotFound(let prefix):
             return "No \(prefix)* bucket found. Is ActivityWatch running with that watcher active?"
@@ -14,20 +14,20 @@ enum AWError: Error, CustomStringConvertible {
     }
 }
 
-actor ActivityWatchService {
+public actor ActivityWatchService {
     private let baseURL: URL
 
-    init(baseURL: URL = URL(string: "http://localhost:5600/api/0")!) {
+    public init(baseURL: URL = URL(string: "http://localhost:5600/api/0")!) {
         self.baseURL = baseURL
     }
 
     /// Discover bucket IDs at runtime — don't hardcode a hostname, since bucket IDs are
     /// hostname-suffixed and differ across machines.
-    func discoverWindowBucket() async throws -> String {
+    public func discoverWindowBucket() async throws -> String {
         try await discoverBucket(prefix: "aw-watcher-window_")
     }
 
-    func discoverAFKBucket() async throws -> String {
+    public func discoverAFKBucket() async throws -> String {
         try await discoverBucket(prefix: "aw-watcher-afk_")
     }
 
@@ -42,7 +42,7 @@ actor ActivityWatchService {
         return match
     }
 
-    func fetchEvents(bucketId: String, since: Date) async throws -> [AWEvent] {
+    public func fetchEvents(bucketId: String, since: Date) async throws -> [AWEvent] {
         var components = URLComponents(
             url: baseURL.appendingPathComponent("buckets/\(bucketId)/events"),
             resolvingAgainstBaseURL: false

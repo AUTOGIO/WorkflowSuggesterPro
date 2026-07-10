@@ -1,10 +1,10 @@
 import Foundation
 import FoundationModels
 
-enum FoundationModelsSuggestionError: Error, CustomStringConvertible {
+public enum FoundationModelsSuggestionError: Error, CustomStringConvertible {
     case unavailable(SystemLanguageModel.Availability.UnavailableReason)
 
-    var description: String {
+    public var description: String {
         switch self {
         case .unavailable(.deviceNotEligible):
             return "This device is not eligible for Apple Intelligence."
@@ -18,8 +18,10 @@ enum FoundationModelsSuggestionError: Error, CustomStringConvertible {
     }
 }
 
-struct FoundationModelsSuggestionService: Sendable {
-    func generateSuggestions(for workflows: [RecurringWorkflow]) async throws -> [SuggestionResult] {
+public struct FoundationModelsSuggestionService: Sendable {
+    public init() {}
+
+    public func generateSuggestions(for workflows: [RecurringWorkflow]) async throws -> [SuggestionResult] {
         switch SystemLanguageModel.default.availability {
         case .available:
             break

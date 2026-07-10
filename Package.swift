@@ -10,16 +10,30 @@ let package = Package(
         .executable(
             name: "WorkflowSuggesterPro",
             targets: ["WorkflowSuggesterPro"]
-        )
+        ),
+        .executable(
+            name: "WorkflowSuggesterProApp",
+            targets: ["WorkflowSuggesterProApp"]
+        ),
     ],
     targets: [
+        .target(
+            name: "WorkflowSuggesterCore",
+            path: "Sources/WorkflowSuggesterCore"
+        ),
         .executableTarget(
             name: "WorkflowSuggesterPro",
+            dependencies: ["WorkflowSuggesterCore"],
             path: "Sources/WorkflowSuggesterPro"
+        ),
+        .executableTarget(
+            name: "WorkflowSuggesterProApp",
+            dependencies: ["WorkflowSuggesterCore"],
+            path: "Sources/WorkflowSuggesterProApp"
         ),
         .testTarget(
             name: "WorkflowSuggesterProTests",
-            dependencies: ["WorkflowSuggesterPro"],
+            dependencies: ["WorkflowSuggesterCore"],
             path: "Tests/WorkflowSuggesterProTests"
         ),
     ],

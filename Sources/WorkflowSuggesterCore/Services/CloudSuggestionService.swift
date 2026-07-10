@@ -1,13 +1,13 @@
 import Foundation
 
-struct CloudSuggestionService: Sendable {
+public struct CloudSuggestionService: Sendable {
     private let environment: [String: String]
 
-    init(environment: [String: String] = ProcessInfo.processInfo.environment) {
+    public init(environment: [String: String] = ProcessInfo.processInfo.environment) {
         self.environment = environment
     }
 
-    func generateSuggestions(for workflows: [RecurringWorkflow]) async throws -> [SuggestionResult] {
+    public func generateSuggestions(for workflows: [RecurringWorkflow]) async throws -> [SuggestionResult] {
         let provider = try selectProvider()
         let prompt = WorkflowPromptFormatting.jsonPrompt(for: workflows)
         return try await provider.generateSuggestions(prompt: prompt)
