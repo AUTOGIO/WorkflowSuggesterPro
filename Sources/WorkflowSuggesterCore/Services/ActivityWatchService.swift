@@ -16,9 +16,14 @@ public enum AWError: Error, CustomStringConvertible {
 
 public actor ActivityWatchService {
     private let baseURL: URL
+    private let session: URLSession
 
     public init(baseURL: URL = URL(string: "http://localhost:5600/api/0")!) {
         self.baseURL = baseURL
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 60
+        self.session = URLSession(configuration: config)
     }
 
     /// Discover bucket IDs at runtime — don't hardcode a hostname, since bucket IDs are
@@ -33,7 +38,7 @@ public actor ActivityWatchService {
 
     private func discoverBucket(prefix: String) async throws -> String {
         let url = baseURL.appendingPathComponent("buckets/")
-        let (data, response) = try await URLSession.shared.data(from: url)
+        let (data, response) = try await session.data(from: url)
         try Self.checkHTTPStatus(response)
         let buckets = try JSONDecoder().decode([String: BucketInfo].self, from: data)
         guard let match = buckets.keys.first(where: { $0.hasPrefix(prefix) }) else {
@@ -51,7 +56,7 @@ public actor ActivityWatchService {
         components.queryItems = [
             URLQueryItem(name: "start", value: formatter.string(from: since))
         ]
-        let (data, response) = try await URLSession.shared.data(from: components.url!)
+        let (data, response) = try await session.data(from: components.url!)
         try Self.checkHTTPStatus(response)
         return try AWDateDecoding.decoder().decode([AWEvent].self, from: data)
     }

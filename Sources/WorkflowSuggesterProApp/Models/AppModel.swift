@@ -6,18 +6,6 @@ import WorkflowSuggesterCore
 @MainActor
 @Observable
 final class AppModel {
-    enum GenerationSource: Equatable {
-        case onDevice
-        case cloud(provider: String)
-
-        var displayName: String {
-            switch self {
-            case .onDevice: return "On-device"
-            case .cloud(let provider): return "Cloud (\(provider))"
-            }
-        }
-    }
-
     enum ProviderMode: String, CaseIterable, Codable, Identifiable {
         case onDeviceFirst, forceAnthropic, forceOpenAI
         var id: String { rawValue }
@@ -60,6 +48,7 @@ final class AppModel {
     private let preferencesStore: AppPreferencesStore
     private let keychainStore: any SecretStoring
     private var scriptsDirectoryURL: URL?
+    private var generationTask: Task<Void, Never>?
 
     init(
         preferencesStore: AppPreferencesStore = AppPreferencesStore(),
@@ -80,86 +69,66 @@ final class AppModel {
         }
     }
 
+    func cancelGeneration() {
+        generationTask?.cancel()
+        generationTask = nil
+        isGenerating = false
+        lastStatusMessage = "Generation cancelled."
+    }
+
     func regenerate() {
         guard !isGenerating else { return }
         isGenerating = true
         lastErrorMessage = nil
         lastStatusMessage = "Scanning ActivityWatch history…"
 
-        let lookbackDays = self.lookbackDays
-        let minOccurrences = self.minOccurrences
         let providerMode = self.providerMode
-        let maxWorkflowsInPrompt = Self.maxWorkflowsInPrompt
         let anthropicKey = try? keychainStore.loadSecret(account: Self.anthropicKeychainAccount)
         let openAIKey = try? keychainStore.loadSecret(account: Self.openAIKeychainAccount)
 
-        Task.detached(priority: .userInitiated) { [weak self] in
+        var env: [String: String] = [:]
+        if let anthropicKey { env["ANTHROPIC_API_KEY"] = anthropicKey }
+        if let openAIKey { env["OPENAI_API_KEY"] = openAIKey }
+
+        let forceCloud: Bool
+        switch providerMode {
+        case .forceAnthropic:
+            env["WORKFLOWSUGGESTER_PROVIDER"] = "anthropic"
+            forceCloud = true
+        case .forceOpenAI:
+            env["WORKFLOWSUGGESTER_PROVIDER"] = "openai"
+            forceCloud = true
+        case .onDeviceFirst:
+            forceCloud = false
+        }
+
+        let config = WorkflowPipelineConfig(
+            lookbackDays: self.lookbackDays,
+            minOccurrences: self.minOccurrences,
+            maxWorkflowsInPrompt: Self.maxWorkflowsInPrompt,
+            forceCloud: forceCloud,
+            environment: env
+        )
+
+        generationTask = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             do {
-                let awService = ActivityWatchService()
-                let bucketId = try await awService.discoverWindowBucket()
-                let since = Date().addingTimeInterval(-Double(lookbackDays) * 86400)
-                let windowEvents = try await awService.fetchEvents(bucketId: bucketId, since: since)
-
-                let events: [AWEvent]
-                do {
-                    let afkBucketId = try await awService.discoverAFKBucket()
-                    let afkEvents = try await awService.fetchEvents(bucketId: afkBucketId, since: since)
-                    events = AFKFilter().filterToActive(windowEvents: windowEvents, afkEvents: afkEvents)
-                } catch {
-                    events = windowEvents
+                let result = try await WorkflowPipeline().run(config: config) { status in
+                    await MainActor.run { self.lastStatusMessage = status }
                 }
 
-                let recurring = RecurrenceDetector().detect(events: events, minOccurrences: minOccurrences)
                 await MainActor.run {
-                    self.recurringWorkflows = recurring
-                    self.lastStatusMessage = recurring.isEmpty
-                        ? "No recurring workflows found in the last \(lookbackDays) days."
-                        : "Found \(recurring.count) recurring workflow(s). Generating suggestions…"
-                }
-                guard !recurring.isEmpty else {
-                    await MainActor.run { self.isGenerating = false }
-                    return
-                }
-
-                let promptWorkflows = Array(recurring.prefix(maxWorkflowsInPrompt))
-                var env: [String: String] = [:]
-                if let anthropicKey { env["ANTHROPIC_API_KEY"] = anthropicKey }
-                if let openAIKey { env["OPENAI_API_KEY"] = openAIKey }
-
-                let suggestions: [SuggestionResult]
-                let source: GenerationSource
-                switch providerMode {
-                case .forceAnthropic, .forceOpenAI:
-                    let providerName = providerMode == .forceAnthropic ? "anthropic" : "openai"
-                    env["WORKFLOWSUGGESTER_PROVIDER"] = providerName
-                    await MainActor.run { self.lastStatusMessage = "Generating with cloud provider…" }
-                    suggestions = try await CloudSuggestionService(environment: env).generateSuggestions(for: promptWorkflows)
-                    source = .cloud(provider: providerName)
-                case .onDeviceFirst:
-                    do {
-                        await MainActor.run {
-                            self.lastStatusMessage = "Generating on-device with Apple Intelligence — this can take 30–90 seconds…"
-                        }
-                        suggestions = try await FoundationModelsSuggestionService().generateSuggestions(for: promptWorkflows)
-                        source = .onDevice
-                    } catch let error as FoundationModelsSuggestionError {
-                        await MainActor.run { self.lastStatusMessage = "On-device unavailable (\(error.description)). Falling back to cloud…" }
-                        suggestions = try await CloudSuggestionService(environment: env).generateSuggestions(for: promptWorkflows)
-                        source = .cloud(provider: env["WORKFLOWSUGGESTER_PROVIDER"] ?? "auto")
+                    self.recurringWorkflows = result.recurringWorkflows
+                    if result.recurringWorkflows.isEmpty {
+                        self.lastStatusMessage = "No recurring workflows found in the last \(config.lookbackDays) days."
+                    } else {
+                        self.suggestions = result.suggestions
+                        self.lastGenerationSource = result.source
+                        self.lastGeneratedAt = Date()
+                        self.lastStatusMessage = "Wrote \(result.writtenScriptURLs.count) automation script(s)."
+                        self.refreshGeneratedScripts()
                     }
-                }
-
-                let writer = try AutomationScriptWriter()
-                let paths = try writer.write(suggestions, timestamp: Date())
-
-                await MainActor.run {
-                    self.suggestions = suggestions
-                    self.lastGenerationSource = source
-                    self.lastGeneratedAt = Date()
-                    self.lastStatusMessage = "Wrote \(paths.count) automation script(s)."
                     self.isGenerating = false
-                    self.refreshGeneratedScripts()
                 }
             } catch {
                 await MainActor.run {

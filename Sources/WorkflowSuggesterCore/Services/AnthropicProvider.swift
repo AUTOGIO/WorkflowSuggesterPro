@@ -12,7 +12,7 @@ struct AnthropicProvider: LLMProvider {
     }
 
     func generateSuggestions(prompt: String) async throws -> [SuggestionResult] {
-        var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!, timeoutInterval: 120)
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")

@@ -61,8 +61,12 @@ struct DashboardView: View {
         }
     }
 
-    private func sourceBadge(_ source: AppModel.GenerationSource) -> some View {
-        Text(source.displayName)
+    private func sourceBadge(_ source: GenerationSource) -> some View {
+        let displayName: String = switch source {
+        case .onDevice: "On-device"
+        case .cloud(let provider): "Cloud (\(provider))"
+        }
+        return Text(displayName)
             .font(.caption.bold())
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
@@ -158,11 +162,19 @@ struct DashboardView: View {
     private var actionsSection: some View {
         GroupBox("Actions") {
             VStack(alignment: .leading, spacing: 10) {
-                Button(appModel.isGenerating ? "Generating…" : "Regenerate") {
-                    appModel.regenerate()
+                HStack(spacing: 12) {
+                    Button(appModel.isGenerating ? "Generating…" : "Regenerate") {
+                        appModel.regenerate()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(appModel.isGenerating)
+
+                    if appModel.isGenerating {
+                        Button("Cancel", role: .destructive) {
+                            appModel.cancelGeneration()
+                        }
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(appModel.isGenerating)
 
                 if appModel.isGenerating {
                     ProgressView("Generating… this can take 30–90 seconds for on-device generation.")

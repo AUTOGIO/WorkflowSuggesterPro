@@ -9,8 +9,22 @@ public struct CloudSuggestionService: Sendable {
 
     public func generateSuggestions(for workflows: [RecurringWorkflow]) async throws -> [SuggestionResult] {
         let provider = try selectProvider()
-        let prompt = WorkflowPromptFormatting.jsonPrompt(for: workflows)
-        return try await provider.generateSuggestions(prompt: prompt)
+        let basePrompt = WorkflowPromptFormatting.jsonPrompt(for: workflows)
+        var lastError: Error = LLMProviderError.invalidResponse("cloud generation produced no attempts")
+
+        for attempt in 1...2 {
+            let prompt = attempt == 1
+                ? basePrompt
+                : basePrompt + "\n\n" + WorkflowPromptFormatting.strictJSONReminder
+            do {
+                return try await provider.generateSuggestions(prompt: prompt)
+            } catch {
+                lastError = error
+                guard attempt == 1, CloudJSONExtraction.isJSONParseFailure(error) else { throw error }
+            }
+        }
+
+        throw lastError
     }
 
     private func selectProvider() throws -> any LLMProvider {

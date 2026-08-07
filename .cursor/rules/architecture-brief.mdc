@@ -1,0 +1,49 @@
+---
+description: Durable engineering brief distilled from NotebookLM — constraints when MCP is offline
+alwaysApply: true
+---
+
+# WorkflowSuggesterPro — Engineering Brief
+
+Distilled from NotebookLM fontes (`README.md`, `AGENTS.md`, `docs/REPOSITORY_AUDIT.md`, `docs/notebooklm-standing-prompts.md`). Refresh when those change (see `docs/notebooklm.md`).
+
+## Constraints
+
+- macOS 26+ (Tahoe) and Apple Silicon; Foundation Models require this floor
+- ActivityWatch is local-only: `http://localhost:5600` with `aw-watcher-window`
+- Generated automations are commented shell scripts for **human review before run** — not auto-executed
+- API keys live in Keychain / env vars; never invent secrets or commit them
+- No third-party SwiftPM packages — Apple frameworks only (Foundation, FoundationModels, Security, SwiftUI, AppKit)
+
+## Current decisions
+
+- Three targets: `WorkflowSuggesterCore` (shared), `WorkflowSuggesterPro` (CLI), `WorkflowSuggesterProApp` (SwiftUI Dock + menu bar)
+- Pipeline: AW window events (14 days) → AFK filter → recurrence (≥4) → top 5 workflows → LLM → `AutomationScriptWriter`
+- LLM order: on-device Apple Foundation Models, then cloud Anthropic/OpenAI fallback (`WORKFLOWSUGGESTER_FORCE_CLOUD` / `WORKFLOWSUGGESTER_PROVIDER`)
+- Output path: `~/Library/Application Support/WorkflowSuggesterPro/GeneratedAutomations/`
+- Persistent state is minimal: UserDefaults preferences + Keychain keys + generated scripts (no DB)
+
+## Conventions
+
+- Layout per `AGENTS.md`: `Sources/`, `Tests/`, `scripts/`, `docs/`, `archive/`; prefer move over copy; no new top-level folders without asking
+- Build: `swift run WorkflowSuggesterPro`; GUI: `./scripts/build_and_run.sh`; tests: `swift test` (use `xattr -cr .build` if codesign detritus fails)
+- Short questions → short answers; cite sources; missing figures → `n/v`
+
+## Exclusions
+
+- Do not treat NotebookLM as authority for live AW/API numbers
+- Do not upload toolchain files (`Package.swift`), binaries, `.build/`, or `dist/` as NotebookLM fontes
+- Do not invent new product scope (background daemons, App Store packaging) unless docs say so
+
+## Known gaps (from audit — do not soft-pedal)
+
+- AUDIT-001: tracked `dist/` binary (gitignore already lists it; stop tracking)
+- AUDIT-002: no timeouts on AW / LLM `URLSession` requests
+- AUDIT-003: generated scripts default `chmod 755` (prefer non-executable until user enables)
+- Limited tests for LLM/JSON/script-writer paths
+
+## Open questions
+
+- Keep or permanently drop committed `dist/` artifacts from history
+- Purpose of empty `reports/` (if still present)
+- Whether GUI distribution will ever need code-signing beyond personal use

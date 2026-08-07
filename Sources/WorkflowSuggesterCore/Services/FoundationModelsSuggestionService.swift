@@ -1,6 +1,7 @@
 import Foundation
 import FoundationModels
 
+@available(macOS 26.0, iOS 26.0, *)
 public enum FoundationModelsSuggestionError: Error, CustomStringConvertible {
     case unavailable(SystemLanguageModel.Availability.UnavailableReason)
 
@@ -18,6 +19,7 @@ public enum FoundationModelsSuggestionError: Error, CustomStringConvertible {
     }
 }
 
+@available(macOS 26.0, iOS 26.0, *)
 public struct FoundationModelsSuggestionService: Sendable {
     public init() {}
 

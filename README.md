@@ -1,18 +1,12 @@
 # WorkflowSuggesterPro
 
-Reads recent window-activity history from a local [ActivityWatch](https://activitywatch.net) instance, detects recurring app/window patterns, and asks an LLM (on-device Apple Foundation Models, falling back to a cloud provider) to suggest automations worth building. Writes each suggestion out as a commented, reviewable shell script.
+macOS app that reads recent window activity from local [ActivityWatch](https://activitywatch.net), finds recurring app/window patterns, and asks an LLM (on-device Apple Foundation Models, with cloud fallback) to suggest automations. Suggestions are written as commented, reviewable shell scripts.
 
 ## Requirements
 
 - macOS 26+, Apple Silicon
-- ActivityWatch running locally with `aw-watcher-window` active (`http://localhost:5600`)
-- For the on-device path: Apple Intelligence enabled in System Settings
-- For the cloud fallback path (used when Apple Intelligence is unavailable): one of
-  - `ANTHROPIC_API_KEY` (optionally `ANTHROPIC_MODEL`, default `claude-sonnet-4-5`)
-  - `OPENAI_API_KEY` (optionally `OPENAI_MODEL`, default `gpt-4o-mini`)
-  - If both keys are set, Anthropic is used unless `WORKFLOWSUGGESTER_PROVIDER=openai` is set.
-
-Model IDs are env-overridable on purpose — check the current catalog for your provider before relying on the defaults above.
+- ActivityWatch running locally (`http://localhost:5600`) with `aw-watcher-window`
+- Apple Intelligence for on-device suggestions; or `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` for cloud fallback
 
 ## Run
 
@@ -20,25 +14,47 @@ Model IDs are env-overridable on purpose — check the current catalog for your 
 swift run WorkflowSuggesterPro
 ```
 
-Looks back 14 days, requires at least 4 occurrences of the same app/window title to count as "recurring." Generated scripts are written to:
-
-```
-~/Library/Application Support/WorkflowSuggesterPro/GeneratedAutomations/
-```
-
-Review each script before running it — the LLM's implementation notes are written as comments, not executed automatically.
-
-## Testing the cloud fallback
-
-The cloud path only runs when the on-device model is unavailable, which never happens on a
-Mac with Apple Intelligence enabled — so it's otherwise untestable. Force it with:
+GUI app bundle (optional):
 
 ```sh
-WORKFLOWSUGGESTER_FORCE_CLOUD=1 ANTHROPIC_API_KEY=... swift run WorkflowSuggesterPro
+./scripts/build_and_run.sh
 ```
 
-## Test
+Tests:
 
 ```sh
 swift test
 ```
+
+If `swift test` fails with "resource fork, Finder information, or similar detritus not allowed", clear extended attributes and retry:
+
+```sh
+xattr -cr .build && swift test
+```
+
+Generated scripts land in `~/Library/Application Support/WorkflowSuggesterPro/GeneratedAutomations/` — review before running.
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ANTHROPIC_API_KEY` | Anthropic API key for cloud fallback | — |
+| `OPENAI_API_KEY` | OpenAI API key for cloud fallback | — |
+| `WORKFLOWSUGGESTER_FORCE_CLOUD` | Set to any value to skip on-device and use cloud | — |
+| `WORKFLOWSUGGESTER_PROVIDER` | Force `anthropic` or `openai` | auto-detect |
+| `ANTHROPIC_MODEL` | Override Anthropic model | `claude-sonnet-4-5` |
+| `OPENAI_MODEL` | Override OpenAI model | `gpt-4o-mini` |
+
+## Where things live
+
+- `Sources/` — app and core library code
+- `Tests/` — unit tests
+- `scripts/` — helpers (e.g. build & open the `.app`)
+- `docs/` — guides (including NotebookLM wiring)
+- `archive/` — obsolete files kept for reference
+- `Package.swift` — Swift package definition
+
+## NotebookLM
+
+Dedicated research notebook for this repo: [WorkflowSuggesterPro](https://notebook.google.com/notebook/88b68b2b-6306-438b-a717-c351ff60ccf4).  
+Cursor keeps a durable brief in `.cursor/rules/architecture-brief.mdc`. See [`docs/notebooklm.md`](docs/notebooklm.md).

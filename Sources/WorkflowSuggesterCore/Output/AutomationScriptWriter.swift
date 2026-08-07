@@ -32,17 +32,24 @@ public struct AutomationScriptWriter: Sendable {
             let filename = "\(stamp)-\(index)-\(Self.slugify(suggestion.title)).sh"
             let fileURL = outputDirectory.appendingPathComponent(filename)
             try Self.scriptContents(for: suggestion).write(to: fileURL, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fileURL.path)
+            try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileURL.path)
             writtenURLs.append(fileURL)
         }
         return writtenURLs
     }
 
     private static func scriptContents(for suggestion: SuggestionResult) -> String {
-        let implementationLines = suggestion.implementation
+        let body = suggestion.implementation
             .split(separator: "\n", omittingEmptySubsequences: false)
-            .map { "# \($0)" }
+            .map { line -> String in
+                var trimmed = String(line).trimmingCharacters(in: .whitespaces)
+                if trimmed.hasPrefix("# ") {
+                    trimmed = String(trimmed.dropFirst(2))
+                }
+                return trimmed
+            }
             .joined(separator: "\n")
+
         return """
         #!/bin/sh
         # \(suggestion.title)
@@ -50,8 +57,9 @@ public struct AutomationScriptWriter: Sendable {
         # Rationale: \(suggestion.rationale)
         # Estimated savings: \(suggestion.savings)
         #
-        # Implementation notes (review before running):
-        \(implementationLines)
+        # Review this script before running. WorkflowSuggester Pro does not execute it automatically.
+        #
+        \(body)
         """
     }
 

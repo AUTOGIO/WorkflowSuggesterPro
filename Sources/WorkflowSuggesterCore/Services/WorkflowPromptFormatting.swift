@@ -26,16 +26,39 @@ enum WorkflowPromptFormatting {
     (e.g. opening a folder) with no real automation opportunity — only suggest something \
     where an automation would meaningfully replace repeated manual steps.
 
-    The "implementation" field must be concrete and runnable: actual shell commands, an \
-    `osascript` snippet, a `shortcuts run` invocation, or precise step-by-step instructions \
-    naming specific paths, app names, and keyboard shortcuts. Do not write a vague description \
-    of what the automation should do — write the automation itself.
+    The "implementation" field must be concrete and runnable today on macOS using only real \
+    shell commands (`open`, `cp`, `rsync`, `mkdir`), `osascript` for basic app activation or \
+    Finder operations, or `shortcuts run "<Shortcut Name>"` for an existing Shortcuts automation.
+
+    Rules:
+    - Do NOT invent AppleScript commands (e.g. "execute prompt", "activate shortcut") — most apps \
+    are not scriptable beyond `activate` and `open`.
+    - `shortcuts run` takes a Shortcut name only, never a file path (.scpt, .app).
+    - Do NOT invent file paths like ~/Library/Scripts/... unless the workflow data shows that path.
+    - Prefer simple, verifiable commands over speculative integrations.
+    - For backup workflows, use `rsync` or `cp` with real paths from the workflow title when visible.
+    - For app-launch workflows, use `open -a "App Name"` or `osascript -e 'tell application "App Name" to activate'`.
     """
 
     static let jsonFormatInstruction = """
     Respond with ONLY a JSON array, no markdown code fences, no commentary. Each element must be \
     an object with exactly these string fields: "title", "rationale", "implementation", "savings" \
     (one of "High", "Medium", "Low").
+
+    The "implementation" field must contain one or more runnable shell commands separated by newlines. \
+    Wrap the entire osascript script in single quotes; use double quotes only inside the AppleScript \
+    (e.g. tell application "Finder"). Do not nest single quotes inside the -e argument.
+
+    Valid examples:
+    - "open -a Notes"
+    - "osascript -e 'tell application \"Finder\" to open folder \"Documents\" of home'"
+    - "rsync -a ~/Documents/ ~/Backups/Documents/"
+    - "shortcuts run \"Backup Documents\""
+
+    Invalid examples (do not output these):
+    - "osascript -e 'tell application 'ChatGPT' to execute prompt \"...\"'"
+    - "shortcuts run \"~/Library/Scripts/foo.scpt\""
+    - "osascript -e 'tell application 'Stream Deck' to activate shortcut \"notes\"'"
     """
 
     /// Shared by both the on-device and cloud paths: both parse the model's free-text

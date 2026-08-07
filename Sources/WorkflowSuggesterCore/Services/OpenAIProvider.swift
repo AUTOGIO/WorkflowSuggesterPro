@@ -12,7 +12,7 @@ struct OpenAIProvider: LLMProvider {
     }
 
     func generateSuggestions(prompt: String) async throws -> [SuggestionResult] {
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
+        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!, timeoutInterval: 120)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "content-type")

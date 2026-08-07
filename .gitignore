@@ -1,6 +1,36 @@
-.build/
-.swiftpm/
+# macOS
 .DS_Store
 Icon?
+._*
+
+# Swift / SPM
+.build/
+.swiftpm/
 *.xcodeproj
+*.xcworkspace
+DerivedData/
+
+# App bundle build output
 dist/
+
+# Secrets & local env
+.env
+.env.*
+!.env.example
+
+# Python (if used later)
+__pycache__/
+.venv/
+venv/
+
+# Node (if used later)
+node_modules/
+
+# Reports (generated output)
+reports/
+
+# Logs & temp
+logs/
+tmp/
+*.log
+*.tmp

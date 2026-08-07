@@ -1,0 +1,39 @@
+---
+description: NotebookLM integration — which notebook to query and when
+alwaysApply: true
+---
+
+# NotebookLM ↔ Cursor
+
+## Notebook
+
+- **Name:** `WorkflowSuggesterPro`
+- **URL:** https://notebook.google.com/notebook/88b68b2b-6306-438b-a717-c351ff60ccf4
+- **ID:** `88b68b2b-6306-438b-a717-c351ff60ccf4`
+- **MCP library id:** `workflowsuggesterpro`
+
+MCP server: `notebooklm` / `user-notebooklm` (global Cursor MCP). Auth gotcha: login may land on `notebook.google.com` while waiters watch `notebooklm.google.com` — see `docs/cursor-notebooklm-wiring-guide.md`.
+
+## When to call NotebookLM MCP
+
+- Synthesize across uploaded fontes (README, AGENTS, audit, standing prompts)
+- Pull citation-backed summaries already refined in the notebook
+- Cross-check a proposal against notebook notes before a large change
+
+## When NOT to call NotebookLM
+
+- Live ActivityWatch metrics or LLM API behavior that must be verified at runtime
+- File placement / repo layout (follow `AGENTS.md`)
+- Day-to-day coding policy already covered by skills or `.cursor/rules`
+
+## Conflict resolution
+
+1. `AGENTS.md` / project skills / ADRs win for policy
+2. `.cursor/rules/architecture-brief.mdc` wins for durable constraints when MCP is offline
+3. NotebookLM is a synthesis aid — cite it; do not override canonical docs on conflicts
+
+## Hygiene
+
+- Do not commit Google cookies, MCP auth state, or `.env` secrets
+- Do not upload `Package.swift`, binaries, `.build/`, or `dist/` as NotebookLM fontes
+- After material source changes, refresh the brief (see `docs/notebooklm.md`)
