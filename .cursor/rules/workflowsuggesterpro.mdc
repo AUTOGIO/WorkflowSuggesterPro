@@ -1,0 +1,10 @@
+---
+description: Core operating instructions, repository layout constraints, and file management rules for WorkflowSuggesterPro
+globs: *
+alwaysApply: true
+---
+- **Strict Directory Layout:** Maintain the explicit top-level folder structure (`Sources/`, `Tests/`, `scripts/`, `config/`, `data/`, `assets/`, `docs/`, `archive/`). Do not invent new top-level folders without explicit permission.
+- **Root Constraints:** The repository root must only contain foundational files (`README.md`, `AGENTS.md`, `.gitignore`, and toolchain files like `Package.swift`). Treat build outputs like `.build/` or `dist/` as gitignored, not source files.
+- **File Management & Versioning:** Prefer moving or editing files over copying or creating new ones. Never use filename versioning (e.g., `Foo_v1.0.md`); instead, move obsolete files to the `archive/` directory rather than deleting them. Always fix broken paths immediately after moving files to ensure builds continue working.
+- **Security & Credentials:** Never commit secrets, `.env` files, keychain dumps, or API keys (e.g., `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) to the repository.
+- **Automation Outputs:** Ensure any generated automation shell scripts are strictly directed to `~/Library/Application Support/WorkflowSuggesterPro/GeneratedAutomations/` and formatted as commented, reviewable scripts before execution.
